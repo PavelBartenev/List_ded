@@ -1,9 +1,13 @@
-﻿#include <stdio.h>
+#define _CRT_SECURE_NO_WARNINGS
+
+#include <stdio.h>
 #include <stdlib.h>
 
 typedef int type;
 
 int const poison = -1;
+
+int const MAXDATA = 100;
 
 struct list_d
 {
@@ -16,6 +20,19 @@ struct list_d
 	int next_free;
 	int size;
 };
+
+#define DEBUG
+
+#ifdef DEBUG
+#define DUMP(list)                                                                        \
+    {                                                                                     \
+       printf("FAILED  LINE %ld\nFUNCTION FAILED %s\n\n", __LINE__, __FUNCTION__);        \
+       Draw(list);                                                                        \
+    }                                                                                     \
+
+#else                                                                                                                                                        
+    #define DUMP(this_);      
+#endif
 
 list_d* list_d_constructor();
 
@@ -49,8 +66,21 @@ int change(list_d*, int, int);
 
 int sort2(list_d*);
 
+int Draw(list_d* list);
+
+int Draw_list(list_d* list, FILE* output);
+
+int list_verificator(list_d*, int);
+
+
+// сделать нормальный верификатор/запускать его раньше доп проверок      разделить блоки графвиза
+
 int main()
 {
+	system("dot -Tpng D:\\vs_projects\\List_ded\\list_graph.txt -oD:\\vs_projects\\List_ded\\image_test.png");
+
+	return 0;
+
 	list_d* list = list_d_constructor();
 
 	for (int i = 0; i < 10; i++)
@@ -62,7 +92,10 @@ int main()
 	logic_insert(555, list, 3);
 	insert_after(999, list, 5);
 
-	sort2(list);
+	Draw(list);
+
+	
+	//sort2(list);
 
 	for (int i = 1; i < 23; i++)
 		printf("%d ", get_data(list, i));
@@ -70,7 +103,7 @@ int main()
 	printf("\n%d", logic_get(list, 0));
 	printf("\n%d", logic_get(list, 5));
 
-
+    
 	return 0;
 }
 
@@ -81,19 +114,19 @@ list_d* list_d_constructor()
 	if (!new_list)
 		return (nullptr);
 
-	new_list->data = (type*)calloc(100, sizeof(type));
-	new_list->next = (int*)calloc(100, sizeof(int));
-	new_list->prev = (int*)calloc(100, sizeof(int));
+	new_list->data = (type*)calloc(MAXDATA, sizeof(type));
+	new_list->next = (int*)calloc(MAXDATA, sizeof(int));
+	new_list->prev = (int*)calloc(MAXDATA, sizeof(int));
 
 	if (!(new_list && new_list->data && new_list->prev && new_list->next))
-		exit(-1);
+		DUMP(new_list);
 
 	new_list->head = 0;
 	new_list->tail = 0;
 	new_list->next_free = 1;
 	new_list->size = 0;
 
-	for (int i = 1; i < 100; i++)
+	for (int i = 1; i < MAXDATA; i++)
 	{
 		new_list->next[i] = i + 1;
 		new_list->prev[i] = poison;
@@ -104,8 +137,8 @@ list_d* list_d_constructor()
 
 int insert_back(type data, list_d* list)
 {
-	if (!list)
-		return -2;
+	if ((!list) || list->size >= MAXDATA)
+		DUMP(list);
 
 	if (list->size == 0)
 	{
@@ -144,8 +177,8 @@ int insert_back(type data, list_d* list)
 
 int insert_front(type data, list_d* list)
 {
-	if (!list)
-		return -3;
+	if ((!list) || list->size >= MAXDATA)
+		DUMP(list);
 
 	if (list->size == 0)
 	{
@@ -184,8 +217,8 @@ int insert_front(type data, list_d* list)
 
 int search(list_d* list, int number)
 {
-	if ((number >= list->size) || (number < 0))
-		return -4;
+	if ((number < 0) || list_verificator(list, number))
+		DUMP(list);
 
 	int current = list->head;
 
@@ -197,10 +230,8 @@ int search(list_d* list, int number)
 
 int logic_insert(type data, list_d* list, int number)
 {
-	if ((number > list->size) || number < 0)
-	{
-		return -5;
-	}
+	if ((number > list->size) || number < 0 || list_verificator(list, number))
+		DUMP(list);
 
 	if (number == list->size)
 	{
@@ -239,8 +270,8 @@ int logic_insert(type data, list_d* list, int number)
 
 type get_back(list_d* list)
 {
-	if (list->size == 0)
-		return -6;
+	if ((list->size == 0) || !list)
+		DUMP(list);
 
 	type data = list->data[list->tail];
 
@@ -261,8 +292,8 @@ type get_back(list_d* list)
 
 type get_front(list_d* list)
 {
-	if (list->size == 0)
-		return -7;
+	if ((list->size == 0) || !list)
+		DUMP(list);
 
 	type data = list->data[list->head];
 
@@ -285,8 +316,8 @@ type get_front(list_d* list)
 
 type logic_get(list_d* list, int number)
 {
-	if ((number < 0) || (number >= list->size))
-		return -8;
+	if ((number < 0) || (number >= list->size) || list_verificator(list, number))
+		DUMP(list);
 
 	if (number == 0)
 		return get_front(list);
@@ -315,6 +346,9 @@ type logic_get(list_d* list, int number)
 
 type logic_get_data(list_d* list, int number)
 {
+	if (list_verificator(list, number))
+		DUMP(list);
+
 	int current = search(list, number);
 
 	return list->data[current];
@@ -322,13 +356,16 @@ type logic_get_data(list_d* list, int number)
 
 type get_data(list_d* list, int number)
 {
+	if ((list->prev[number] == poison) || list_verificator(list, number))
+		DUMP(list);
+
 	return list->data[number];
 }
 
 int insert_after(type data, list_d* list, int number)
 {
-	if (list->prev[number] == poison)
-		return -9;
+	if ((list->prev[number] == poison) || list_verificator(list, number))
+		DUMP(list);
 
 	int current = list->next_free;
 	list->next_free = list->next[current];
@@ -348,8 +385,8 @@ int insert_after(type data, list_d* list, int number)
 
 int insert_before(type data, list_d* list, int number)
 {
-	if (list->prev[number] == poison)
-		return -10;
+	if ((list->prev[number] == poison) || list_verificator(list, number))
+		DUMP(list);
 
 	int current = list->next_free;
 	list->next_free = list->next[current];
@@ -367,8 +404,8 @@ int insert_before(type data, list_d* list, int number)
 
 type get(list_d* list, int number)
 {
-	if (list->prev[number] == poison)
-		return -11;
+	if ((list->prev[number] == poison) || list_verificator(list, number))
+		DUMP(list);
 
 	type data = list->data[number];
 
@@ -388,8 +425,8 @@ type get(list_d* list, int number)
 int change(list_d* list, int number1, int number2)
 {
 
-	if ((list->prev[number1] == poison) || (list->prev[number2] == poison))
-		return -12;
+	if ((list->prev[number1] == poison) || (list->prev[number2] == poison) || (list_verificator(list, number1)) || (list_verificator(list, number2)))
+		DUMP(list);
 
 	if (number1 == number2)
 		return 0;
@@ -486,7 +523,8 @@ int change(list_d* list, int number1, int number2)
 	return 0;
 	
 }
-/**********************************************
+
+
 int sort(list_d* list)
 {
 	int current = list->head;
@@ -514,7 +552,7 @@ int sort(list_d* list)
 
 	return 0;
 }
-**********************************************/
+
 
 int sort2(list_d* list)
 {
@@ -544,4 +582,67 @@ int sort2(list_d* list)
 	return 0;
 }
 
+int Draw(list_d* list)
+{
+	FILE* output = fopen("output.txt", "w");
 
+	fprintf(output, "digraph structs{\n  rankdir = HR;");
+	Draw_list(list, output);
+	//Draw_connect(list);
+
+	fprintf(output, "\n}");
+
+	fclose(output);
+
+	system("dot -Tpng D:\\vs_projects\\List_ded\\output.txt -oD:\\vs_projects\\List_ded\\image.png");
+
+	return 0;
+}
+
+int Draw_list(list_d* list, FILE* output)
+{
+	int size = list->size;
+	int max_index = list->head;
+	int current_index = list->head;
+
+	for (int i = 0; i < size; i++)
+	{
+		current_index = list->next[current_index];
+
+		if (current_index > max_index) max_index = current_index;
+	}
+
+	fprintf(output, "first [shape=record,label=\"");
+
+	for (int i = 1; i <= max_index; i++)
+	{
+		fprintf(output, " { <f%d> %d | %d | %d } ", i, list->next[i], list->data[i], list->prev[i]);
+
+		if (i < max_index)
+			fprintf(output, "|");
+	}
+
+	fprintf(output, "\" ];\n");
+
+	for (int i = 1; i <= max_index; i++)
+	{
+		if (list->next[i])
+		    fprintf(output, "   first: <f%d> -> first: <f%d> ;\n", i, list->next[i]);
+	}
+
+	return 0;
+}
+
+int list_verificator(list_d* list, int number)
+{
+	if (!list)
+		return 1;
+
+	if ((number > MAXDATA) || (number < 0))
+		return 2;
+
+	if (list->size > MAXDATA)
+		return 3;
+
+	return 0;
+}
